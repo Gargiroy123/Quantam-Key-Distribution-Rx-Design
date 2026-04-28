@@ -2,13 +2,14 @@ clc; clear; close all;
 
 M = 4;                      % QPSK
 alpha2 = 0.5;               % mean photon number |alpha|^2
-beta = 0.23;                % displacement
+%beta = 0.23;                % displacement
+beta = 0.7071;
 T = 1;                      % total time
 dt = 0.001;
 t = 0:dt:T;
 
 % True state index (example: alpha3)
-true_k = 3;
+true_k =4;
 
 % Define constellation (QPSK)
 alpha = sqrt(alpha2)*exp(1j*(0:M-1)*2*pi/M);
@@ -67,47 +68,7 @@ for i = 2:length(t)
     P(:,i) = P_current;
 end
 
-figure;
 
-colors = lines(M);
-
-for k = 1:M
-    plot(t, P(k,:), 'LineWidth', 1.5); hold on;
-end
-
-xlabel('Temporal progress of measurement');
-ylabel('a posteriori probabilities');
-
-legend('\alpha_1','\alpha_2','\alpha_3','\alpha_4');
-
-grid on;
-
-for tt = arrival_times
-    xline(tt, '--k');
-end
-
-[~, max_idx] = max(P);
-
-stairs(t, max_idx/M, 'k', 'LineWidth', 2); % normalized for plotting
-
-[~, max_idx] = max(P);
-
-stairs(t, max_idx/M, 'k', 'LineWidth', 2); % normalized for plotting
-
- %
- % 
- % -------- Extract table --------
-%t_check = [0.15 0.35 0.54 0.71 1.0];
-% t_check = linspace(0.1, 1.0, 10); 
-% idx = round(t_check / dt) + 1;
-% 
-% posterior_table = P(:, idx);
-% 
-% T = array2table(posterior_table, ...
-%     'VariableNames', {'t1_0_15','t2_0_35','t3_0_54','t4_0_71','t5_1_0'}, ...
-%     'RowNames', {'alpha1','alpha2','alpha3','alpha4'});
-% 
-% disp(T);
 
 % Define time points (0.1 spacing)
 t_check = 0.1:0.1:1.0;
@@ -128,46 +89,48 @@ T = array2table(posterior_table, ...
 
 % Display
 disp(T);
+writetable(T, 'posterior_table1.csv', 'WriteRowNames', true);
 
-% Time points (from paper)
-t_pts = [0 0.15 0.35 0.54 0.71 1];
-
-% Posterior values (α1 case)
-P_alpha1 = [ ...
-    0.25   0.024 0.049 0.061 0.139 0.075;  % alpha1
-    0.25   0.277 0.423 0.090 0.291 0.256;  % alpha2
-    0.25   0.403 0.105 0.131 0.302 0.434;  % alpha3
-    0.25   0.277 0.423 0.718 0.268 0.236]; % alpha4
-
-% Create fine time for smooth lines
-t_fine = linspace(0,1,500);
-
-% Interpolate
-P_interp = zeros(4, length(t_fine));
-for k = 1:4
-    P_interp(k,:) = interp1(t_pts, P_alpha1(k,:), t_fine, 'linear');
-end
-
-% Plot
-figure;
-hold on;
-
-colors = lines(4);
-
-for k = 1:4
-    plot(t_fine, P_interp(k,:), 'LineWidth', 1.5, 'Color', colors(k,:));
-end
-
-% Vertical lines at detection times
-for tt = t_pts(2:end-1)
-    xline(tt, '--k');
-end
-
-xlabel('Temporal progress of measurement');
-ylabel('a posteriori probabilities');
-
-title('\alpha_1 case');
-
-legend('\alpha_1','\alpha_2','\alpha_3','\alpha_4');
-
-grid on;
+% % Time points (from paper)
+% t_pts = [0 0.15 0.35 0.54 0.71 1];
+% 
+% % Posterior values (α1 case)
+% P_alpha1 = [ ...
+%     0.25   0.024 0.049 0.061 0.139 0.075;  % alpha1
+%     0.25   0.277 0.423 0.090 0.291 0.256;  % alpha2
+%     0.25   0.403 0.105 0.131 0.302 0.434;  % alpha3
+%     0.25   0.277 0.423 0.718 0.268 0.236]; % alpha4
+% 
+% % Create fine time for smooth lines
+% t_fine = linspace(0,1,500);
+% 
+% % Interpolate
+% P_interp = zeros(4, length(t_fine));
+% for k = 1:4
+% %     P_interp(k,:) = interp1(t_pts, P_alpha1(k,:), t_fine, 'linear');
+%  P_interp(k,:) = interp1(t, P_alpha1(k,:), t_fine, 'linear');
+% end
+% 
+% % Plot
+% figure;
+% hold on;
+% 
+% colors = lines(4);
+% 
+% for k = 1:4
+%     plot(t_fine, P_interp(k,:), 'LineWidth', 1.5, 'Color', colors(k,:));
+% end
+% 
+% % Vertical lines at detection times
+% for tt = t_pts(2:end-1)
+%     xline(tt, '--k');
+% end
+% 
+% xlabel('Temporal progress of measurement');
+% ylabel('a posteriori probabilities');
+% 
+% title('\alpha_1 case');
+% 
+% legend('\alpha_1','\alpha_2','\alpha_3','\alpha_4');
+% 
+% grid on;

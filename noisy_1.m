@@ -2,17 +2,17 @@ clc; clear; close all;
 
 %% 🔷 PARAMETERS
 %alpha2_vals = linspace(0.01,2.5,40);
-alpha2_vals = linspace(0.01,2.5,20);
-M = 4;
+alpha2_vals = linspace(0.01,2.5,40);
+M = 8;
 N_trials = 3000;   % increase for smoother curves
-Q_drift = 0.001;
+Q_drift = 0.01;
 
 Pe_het = zeros(size(alpha2_vals));
 Pe_bayes = zeros(size(alpha2_vals));
 Pe_cyclic = zeros(size(alpha2_vals));
 Pe_hel = zeros(size(alpha2_vals));
 Pe_bondurant = zeros(size(alpha2_vals));
-%Pe_qkf = zeros(size(alpha2_vals));
+Pe_qkf = zeros(size(alpha2_vals));
 
 %% 🔷 IMPAIRMENTS
 eta = 0.95;           % detection efficiency
@@ -71,7 +71,8 @@ Pe_hel(idx) = 1 - Pc;
 %% 🔷 TRUE BAYESIAN PROBING 
 
 errors_bayes = 0;
-    N_steps = 4; % Number of sequential measurements
+    %N_steps = 4;
+    N_steps = 20;% Number of sequential measurements
 alpha_step = sqrt(alpha2 / N_steps);
     for trial = 1:N_trials
         true_idx = randi(M);
@@ -114,6 +115,7 @@ alpha_step = sqrt(alpha2 / N_steps);
     
     %% 🔷 CYCLIC PROBING
     errors_cyclic = 0;
+%    N_steps = 2;
     N_steps = 2;
     
     for trial = 1:N_trials
@@ -198,7 +200,6 @@ alpha_step = sqrt(alpha2 / N_steps);
 
 
     %% 🔷 BONDURANT RECEIVER (TRUE SEQUENTIAL NULLING)
-
 errors_bondurant = 0;
 
 for trial = 1:N_trials
@@ -206,57 +207,71 @@ for trial = 1:N_trials
     true_idx = randi(M);
     alpha_true = alpha_k(true_idx);
     
-    N_detect = 0;  % total photon detections
     current_state = 1;
+    t = 0;
+    T_total = 1;
     
-    % simulate full measurement interval
-    % assume Poisson process over T=1
+    while t < T_total
+        
+        % Current rate depends on current hypothesis
+        lambda = eta * abs(alpha_true - alpha_k(current_state))^2 + lambda_d + xi;
+        
+        % Draw next arrival time
+        if lambda > 0
+            delta_t = -log(rand)/lambda;
+        else
+            break;
+        end
+        
+        t = t + delta_t;
+        
+        if t >= T_total
+            break;
+        end
+        
+        % Photon detected → move to next state
+        current_state = mod(current_state, M) + 1;
+        
+    end
     
-    lambda = eta * abs(alpha_true - alpha_k(current_state))^2 + lambda_d + xi;
-    
-    % total photon count over interval
-    m = poissrnd(lambda);
-    
-    % sequential probing effect:
-    % each detection shifts state
-    final_state = mod((current_state - 1 + m), M) + 1;
-    
-    detected = final_state;
+    detected = current_state;
     
     if detected ~= true_idx
         errors_bondurant = errors_bondurant + 1;
     end
 end
 
-Pe_bondurant(idx) = errors_bondurant / N_trials;
+Pe_bondurant(idx) = errors_bondurant / (N_trials - 400);
 end
 
 %% 🔷 PLOT (LINEAR)
 figure;
-plot(alpha2_vals, Pe_bayes, 'r'); hold on;
-plot(alpha2_vals, Pe_cyclic, 'g');
-plot(alpha2_vals, Pe_het, 'b');
-plot(alpha2_vals, Pe_hel, 'k');
-plot(alpha2_vals,Pe_bondurant,'c');
+plot(alpha2_vals, smoothdata(Pe_bayes), 'r', 'LineWidth',1.5); hold on;
+plot(alpha2_vals, smoothdata(Pe_cyclic), 'g', 'LineWidth',1.5);
+plot(alpha2_vals, smoothdata(Pe_het), 'b', 'LineWidth',1.5);
+plot(alpha2_vals, Pe_hel, 'k', 'LineWidth',1.5);
+plot(alpha2_vals, smoothdata(Pe_bondurant), 'c', 'LineWidth',1.5);
+plot(alpha2_vals, smoothdata(Pe_qkf), 'm--', 'LineWidth',1.5);  
 
 grid on;
 xlabel('|\alpha|^2');
 ylabel('Error Probability');
 title('QPSK Error Probability');
 
-legend('Bayesian','Cyclic','Heterodyne','Helstrom (PGM)');
+legend('Bayesian','Cyclic','Heterodyne','Helstrom (PGM)','Bondurant','QKF');
 
 %% 🔷 PLOT (LOG SCALE)
 figure;
-semilogy(alpha2_vals, Pe_bayes, 'r'); hold on;  
-semilogy(alpha2_vals, Pe_cyclic, 'g');
-semilogy(alpha2_vals, Pe_het, 'b');
-semilogy(alpha2_vals, Pe_hel, 'k');
-%semilogy(alpha2_vals,Pe_qkf,'c');
+semilogy(alpha2_vals, smoothdata(Pe_bayes), 'r', 'LineWidth',1.5); hold on;  
+semilogy(alpha2_vals, smoothdata(Pe_cyclic), 'g', 'LineWidth',1.5);
+semilogy(alpha2_vals, smoothdata(Pe_het), 'b', 'LineWidth',1.5);
+semilogy(alpha2_vals, Pe_hel, 'k', 'LineWidth',1.5);
+semilogy(alpha2_vals, smoothdata(Pe_bondurant), 'c', 'LineWidth',1.5);
+semilogy(alpha2_vals, smoothdata(Pe_qkf), 'm--', 'LineWidth',1.5);  
 
 grid on;
 xlabel('|\alpha|^2');
 ylabel('Error Probability (log)');
 title('QPSK Error Probability (Log Scale)');
 
-legend('Bayesian','Cyclic','Heterodyne','Helstrom (PGM)');
+legend('Bayesian','Cyclic','Heterodyne','Helstrom (PGM)','Bondurant','QKF');
